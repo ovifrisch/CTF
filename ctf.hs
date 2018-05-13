@@ -1,7 +1,7 @@
 type Board = String
 
 {-
-Arg1: A list of boards representing the histor of the game
+Arg1: A list of boards representing the history of the game
 Arg2: A char indicating whether it's 'w' or 'b' turn to move
 Arg3: An int indicating how many moves ahead the minimax algorithm is allowed to search
 OUT: A board representing the next best move
@@ -315,3 +315,105 @@ modifyBoard board ((val, pos) : tail) = modifyBoard (replaceNth board pos val) t
 -------------------------------------------------------------MOVE GENERATION-------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 
+
+-----------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------UTILITY FUCTIONS FOR EVALUATION----------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
+
+{-
+Win condition checkers
+Note that checkWhiteForward will return false if no black pawn exists, so we could remove checkBlackPawn
+Also doesn't check if either player is out of valid moves
+-}
+
+{-
+Arg1: board
+Returns true if White won, false otherwise
+-}
+checkWhiteWin :: String -> Bool
+checkWhiteWin board = not(checkBlackPawn board && checkBlackFlag board) || checkWhiteForward board
+
+{-
+Arg1: board
+Returns true if Black won, false otherwise
+-}
+checkBlackWin :: Board -> Bool
+checkBlackWin board = not(checkWhitePawn board && checkWhiteFlag board) || checkBlackForward board
+
+
+{-
+Arg1: board
+Check if the white flag is still on the board
+-}
+checkWhiteFlag :: Board -> Bool
+checkWhiteFlag board = elem 'W' board
+
+{-
+Arg1: board
+Check if a black flag is still on the board
+-}
+checkBlackFlag :: Board -> Bool
+checkBlackFlag board = elem 'B' board
+
+{-
+Arg1: board
+Check if a white pawn is still on the board
+-}
+checkWhitePawn :: Board -> Bool
+checkWhitePawn board = elem 'w' board
+
+{-
+Arg1: board
+Check if a black pawn is still on the board
+-}
+checkBlackPawn :: Board -> Bool
+checkBlackPawn board = elem 'b' board
+
+{-
+Arg1: board
+Return true if white flag is past all black pawns
+-}
+checkWhiteForward :: Board -> Bool
+checkWhiteForward board = 
+    let boardlen = getBoardLen board
+    in whiteForwardHelper board boardlen
+
+{-
+Arg1: board
+Arg2: side length
+Assist in finding if white flag is past black pawns
+-}
+whiteForwardHelper :: Board -> Int -> Bool
+whiteForwardHelper board len 
+    | null board                                    = True
+    | elem 'b' (drop (length board - len) board)    = False 
+    | elem 'W' (drop (length board - len) board)    = True
+    | otherwise                                     = whiteForwardHelper (take (length board - len) board) len
+
+{-
+Arg1: board
+Return true if Black flag is past all white pawns
+-}
+checkBlackForward :: Board -> Bool
+checkBlackForward board = 
+    let boardlen = getBoardLen board
+    in blackForwardHelper board boardlen
+
+{-
+Arg1: board
+Arg2: side length
+Assist in finding if black flag is past white pawns
+-}
+blackForwardHelper :: Board -> Int -> Bool
+blackForwardHelper board len 
+    | null board                   = True
+    | elem 'w' (take len board)    = False 
+    | elem 'B' (take len board)    = True
+    | otherwise                    = blackForwardHelper (drop len board) len
+
+{-
+Arg1: board
+getBoardLen returns the length of 1 side of the board
+-}
+getBoardLen :: String -> Int
+getBoardLen board = round (sqrt (fromIntegral (length board)))
