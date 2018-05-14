@@ -7,8 +7,8 @@ Arg3: An int indicating how many moves ahead the minimax algorithm is allowed to
 OUT: A board representing the next best move
 -}
 capture :: [Board] -> Char -> Int -> Board
-capture (current:history) 'w' movesAhead = fst (minimax [current] movesAhead True history)
-capture (current:history) 'b' movesAhead = (flipBoard (fst (minimax [flipBoard current] movesAhead True (flipEachBoard history))))
+capture (current:history) 'w' movesAhead = fst (toplevelMinimax current movesAhead True history)
+capture (current:history) 'b' movesAhead = (flipBoard (fst (toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history))))
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -70,6 +70,17 @@ minBoardHelper ((b, val) : tail) (bmin, valmin)
    | otherwise = minBoardHelper tail (bmin, valmin)
 
 {-
+
+-}
+toplevelMinimax :: Board -> Int -> Bool -> [Board] -> (Board, Float)
+toplevelMinimax board height minOrmax history
+   | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
+   | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
+   | height == 0 = (board, goodness board)
+   | minOrmax == True = minimax (filterBoards (generateNewBoards board) history) (height - 1) False history
+   | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history
+
+{-
 Arg1: A list of boards
 Arg2: height of the node
 Arg3: True for max, False for min
@@ -81,14 +92,12 @@ minimax (board : []) height minOrmax history
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
-   | minOrmax == True = minimax (filterBoards (generateNewBoards board) history) (height - 1) False history
-   | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history
+   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) False history))
+   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history))
 
 minimax (board : boards) height minOrmax history
-   | minOrmax == True && null (tail boards) = maxBoard [(minimax [board] (height - 1) False history), (minimax boards (height - 1) False history)]
-   | minOrmax == False && null (tail boards) = minBoard [(minimax [board] (height - 1) True history), (minimax boards (height - 1) True history)]
-   | minOrmax == True = maxBoard [(minimax [board] (height - 1) False history), (minimax boards (height) False history)]
-   | otherwise = minBoard [(minimax [board] (height - 1) True history), (minimax boards (height) True history)]
+   | minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | otherwise = minBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -377,7 +386,7 @@ Return true if white flag is past all black pawns
 -}
 checkWhiteForward :: Board -> Bool
 checkWhiteForward board = 
-    let boardlen = getBoardLen board
+    let boardlen = boardSize board
     in whiteForwardHelper board boardlen
 
 {-
@@ -398,7 +407,7 @@ Return true if Black flag is past all white pawns
 -}
 checkBlackForward :: Board -> Bool
 checkBlackForward board = 
-    let boardlen = getBoardLen board
+    let boardlen = boardSize board
     in blackForwardHelper board boardlen
 
 {-
@@ -413,9 +422,3 @@ blackForwardHelper board len
     | elem 'B' (take len board)    = True
     | otherwise                    = blackForwardHelper (drop len board) len
 
-{-
-Arg1: board
-getBoardLen returns the length of 1 side of the board
--}
-getBoardLen :: String -> Int
-getBoardLen board = round (sqrt (fromIntegral (length board)))
