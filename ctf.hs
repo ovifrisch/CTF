@@ -32,7 +32,6 @@ OUT: The tuple with the maximum value
 maxBoard :: [(Board, Float)] -> (Board, Float)
 maxBoard tuples = maxBoardHelper tuples ("..", -100000)
 
-
 {-
 Arg1: A list of board, goodness tuples
 Arg2: The maximum tuple so far
@@ -56,8 +55,6 @@ OUT: The tuple with the minimum value
 minBoard :: [(Board, Float)] -> (Board, Float)
 minBoard tuples = minBoardHelper tuples ("..", 100000)
 
-
-
 {-
 Arg1: A list of board, goodness tuples
 Arg2: The minimum tuple so far
@@ -71,7 +68,6 @@ minBoardHelper ((b, val) : []) (bmin, valmin)
 minBoardHelper ((b, val) : tail) (bmin, valmin)
    | val < valmin = minBoardHelper tail (bmin, valmin)
    | otherwise = minBoardHelper tail (bmin, valmin)
-
 
 {-
 Arg1: A list of boards
@@ -89,8 +85,10 @@ minimax (board : []) height minOrmax history
    | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history
 
 minimax (board : boards) height minOrmax history
-   | minOrmax == True = maxBoard [(minimax [board] (height -1 ) False history), (minimax boards (height - 1) False history)]
-   | otherwise = minBoard [(minimax [board] (height - 1) True history), (minimax boards (height - 1) True history)]
+   | minOrmax == True && null (tail boards) = maxBoard [(minimax [board] (height - 1) False history), (minimax boards (height - 1) False history)]
+   | minOrmax == False && null (tail boards) = minBoard [(minimax [board] (height - 1) True history), (minimax boards (height - 1) True history)]
+   | minOrmax == True = maxBoard [(minimax [board] (height - 1) False history), (minimax boards (height) False history)]
+   | otherwise = minBoard [(minimax [board] (height - 1) True history), (minimax boards (height) True history)]
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -110,7 +108,10 @@ Arg1: A board
 Out: A number indicating how good of a board this is for 'w'
 -}
 goodness :: Board -> Float
-goodness board = 0.0
+goodness board
+   | checkWhiteWin board = 1000
+   | checkBlackWin board = -1000
+   | otherwise           = 0
 
 -----------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------STATIC BOARD EVALUATION---------------------------------------------------
