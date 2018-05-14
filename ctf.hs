@@ -131,11 +131,9 @@ OUT: A list of boards that can be generated from Arg1 by moving a white piece up
 -}
 generateNewWhiteMovesDown :: Board -> Int -> [Board]
 generateNewWhiteMovesDown currBoard pos
-   | pos > ((length currBoard) + (boardSize currBoard) - 1) = []
+   | pos > ((length currBoard) - (boardSize currBoard) - 1) = []
    | currBoard !! pos == 'w' && currBoard !! (pos + (boardSize currBoard)) == '-' = modifyBoard currBoard [('-', pos), ('w', pos + (boardSize currBoard))] : generateNewWhiteMovesDown currBoard (pos + 1)
    | otherwise = generateNewWhiteMovesDown currBoard (pos + 1)
-
-
 
 {-
 Arg1: A board
@@ -154,12 +152,12 @@ Arg1: A board
 Arg2: A position
 OUT: A list of boards that can be generated from Arg1 by moving a white piece left
 -}
-generateNewWhiteMoveRight :: Board -> Int -> [Board]
-generateNewWhiteMoveRight currBoard pos
+generateNewWhiteMovesRight :: Board -> Int -> [Board]
+generateNewWhiteMovesRight currBoard pos
    | pos > (length currBoard) - 1 = []
-   | mod (pos + 1) (boardSize currBoard) == 0 = generateNewWhiteMoveRight currBoard (pos + 1)
-   | currBoard !! pos == 'w' && currBoard !! (pos + 1) == '-' = modifyBoard currBoard [('-', pos), ('w', pos + 1)] : generateNewWhiteMoveRight currBoard (pos + 1)
-   | otherwise = generateNewWhiteMoveRight currBoard (pos + 1)
+   | mod (pos + 1) (boardSize currBoard) == 0 = generateNewWhiteMovesRight currBoard (pos + 1)
+   | currBoard !! pos == 'w' && currBoard !! (pos + 1) == '-' = modifyBoard currBoard [('-', pos), ('w', pos + 1)] : generateNewWhiteMovesRight currBoard (pos + 1)
+   | otherwise = generateNewWhiteMovesRight currBoard (pos + 1)
 
 {-
 Arg1: A board
@@ -256,7 +254,7 @@ OUT: A list of all the possible moves the 'w' player can make
 generateNewBoards :: Board -> [Board]
 generateNewBoards currBoard = 
    concat [generateNewWhiteMovesDown currBoard 0, generateNewWhiteMovesLeft currBoard 0,
-   generateNewWhiteMoveRight currBoard 0, generateNewWhiteFlagMovesDown currBoard 0,
+   generateNewWhiteMovesRight currBoard 0, generateNewWhiteFlagMovesDown currBoard 0,
    generateNewWhiteFlagMovesUp currBoard 0, generateNewWhiteFlagMovesLeft currBoard 0,
    generateNewWhiteFlagMovesRight currBoard 0, generateNewWhiteJumpsLeft currBoard 0,
    generateNewWhiteJumpsRight currBoard 0, generateNewWhiteJumpsDown currBoard 0]
@@ -284,6 +282,9 @@ flipBoard [] = []
 flipBoard ('-':as) = '-' : (flipBoard as)
 flipBoard('w':as) = 'b' : (flipBoard as)
 flipBoard('b':as) = 'w' : (flipBoard as)
+flipBoard('W':as) = 'B' : (flipBoard as)
+flipBoard('B':as) = 'W' : (flipBoard as)
+
 
 {-
 Arg1: A string
