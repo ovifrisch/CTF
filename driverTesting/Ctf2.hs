@@ -522,7 +522,7 @@ countPiece board c
 
 {-
    Returns the number of white pieces touching other white pieces
--}
+
 
 nearbyFriends :: Board ->  Int -> Float
 nearbyFriends board pos
@@ -532,3 +532,5 @@ nearbyFriends board pos
 
 getSurrounding :: Board -> Int -> Float
 getSurrounding board pos = []
+
+-}

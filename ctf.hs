@@ -295,11 +295,11 @@ flipBoard board = reverse (flipBoardHelper board)
 
 flipBoardHelper :: Board -> Board
 flipBoardHelper [] = []
-flipBoardHelper ('-':as) = '-' : (flipBoard as)
-flipBoardHelper ('w':as) = 'b' : (flipBoard as)
-flipBoardHelper ('b':as) = 'w' : (flipBoard as)
-flipBoardHelper ('W':as) = 'B' : (flipBoard as)
-flipBoardHelper ('B':as) = 'W' : (flipBoard as)
+flipBoardHelper ('-':as) = '-' : (flipBoardHelper as)
+flipBoardHelper ('w':as) = 'b' : (flipBoardHelper as)
+flipBoardHelper ('b':as) = 'w' : (flipBoardHelper as)
+flipBoardHelper ('W':as) = 'B' : (flipBoardHelper as)
+flipBoardHelper ('B':as) = 'W' : (flipBoardHelper as)
 
 
 {-
