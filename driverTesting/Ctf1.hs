@@ -10,7 +10,7 @@ OUT: A board representing the next best move
 -}
 capture :: [Board] -> Char -> Int -> Board
 capture (current:history) 'w' movesAhead = fst (toplevelMinimax current movesAhead True history)
-capture (current:history) 'b' movesAhead = (flipBoard (fst (toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history))))
+capture (current:history) 'b' movesAhead = flipBoard (fst(toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history)))
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -79,8 +79,8 @@ toplevelMinimax board height minOrmax history
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
-   | minOrmax == True = minimax (filterBoards (generateNewBoards board) history) (height - 1) False history
-   | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history
+   | minOrmax == True = minimax (filterBoards (generateNewBoards board) history) (height - 1) True history
+   | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) False history
 
 {-
 Arg1: A list of boards
@@ -91,15 +91,18 @@ OUT: The next best move, and its heuristic strength
 -}
 minimax :: [Board] -> Int -> Bool -> [Board] -> (Board, Float)
 minimax (board : []) height minOrmax history
+   | checkBlackWin board == True || checkWhiteWin board == True = (board,goodness board)
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
-   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) False history))
-   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history))
+   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) True history))
+   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) False history))
 
 minimax (board : boards) height minOrmax history
-   | minOrmax == True = maxBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
-   | otherwise = minBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | null (tail boards) && minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | null (tail boards) = minBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
+   | minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) True history)]
+   | otherwise = minBoard [(minimax [board] (height) True history), (minimax boards (height) False history)]
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -120,9 +123,10 @@ Out: A number indicating how good of a board this is for 'w'
 -}
 goodness :: Board -> Float
 goodness board
-   | checkWhiteWin board = 10000
-   | checkBlackWin board = -10000
-   | otherwise           = (pawnDiff board) * 10
+   | checkWhiteWin board = 1000
+   | checkBlackWin board = -1000
+   | otherwise           = (flagSide board) * (-7) + (flagDistance board) * (-5) + (pawnDiff board) * (10) 
+
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -461,7 +465,7 @@ Arg1: board
 Return: True if white flag is touching either the right or left edge of the board 
 -}
 
-flagSide :: Board -> Bool
+flagSide :: Board -> Float
 flagSide board = flagSideHelper board (boardSize board)
 
 {-
@@ -471,13 +475,15 @@ Arg2: len
 Return: True if white flag is touching either the right or left edge of the board 
 -}
 
-flagSideHelper :: Board -> Int -> Bool
+flagSideHelper :: Board -> Int -> Float
 flagSideHelper board len
-   | null board                                        = False
-   | head (drop (length board - len) board) == 'W'     = True
-   | last (drop (length board - len) board) == 'W'     = True
-   | elem 'W' (drop (length board - len) board)        = False 
-   | otherwise                                         = flagSideHelper(take (length board - len) board) len
+   | elem 'W' (drop (length board - len) board)    = min (fst(rightleftSide (drop (length board - len) board))) (snd(rightleftSide (drop (length board - len) board)))
+   | otherwise                                     = flagSideHelper(take (length board - len) board) len
+
+
+rightleftSide :: Board -> (Float, Float)
+rightleftSide ('W':xs) = (0, fromIntegral (length xs))
+rightleftSide (_:xs) = (1 + fst (rightleftSide xs), snd(rightleftSide xs))
 
 -------------------------------------------------------
 -----------BlockEnemyFlag------------------------------
@@ -500,5 +506,10 @@ Return: An integer of 1,0, or -1.
  Return: Number of rows to enemy side of board.
 -}
 
---flagDistance :: Board -> Int
---flagDistance board = board
+flagDistance :: Board -> Float
+flagDistance board = flagDistanceHelper board (boardSize board)
+
+flagDistanceHelper :: Board -> Int -> Float
+flagDistanceHelper board len
+   | elem 'W' (drop (length board - len) board) = 0
+   | otherwise                                  = 1 + flagDistanceHelper (take (length board - len) board) len

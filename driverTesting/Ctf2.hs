@@ -95,12 +95,14 @@ minimax (board : []) height minOrmax history
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
-   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) False history))
-   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history))
+   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) True history))
+   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) False history))
 
 minimax (board : boards) height minOrmax history
-   | minOrmax == True = maxBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
-   | otherwise = minBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | null (tail boards) && minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | null (tail boards) = minBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
+   | minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) True history)]
+   | otherwise = minBoard [(minimax [board] (height) True history), (minimax boards (height) False history)]
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -123,7 +125,7 @@ goodness :: Board -> Float
 goodness board
    | checkWhiteWin board = 1000
    | checkBlackWin board = -1000
-   | otherwise           = (flagSide board) * (-10) + (flagDistance board) * (-5) + (pawnDiff board) * (10) 
+   | otherwise           = (flagSide board) * (-7) + (flagDistance board) * (-5) + (pawnDiff board) * (10) 
 
 
 

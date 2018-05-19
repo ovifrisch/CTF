@@ -89,16 +89,18 @@ OUT: The next best move, and its heuristic strength
 -}
 minimax :: [Board] -> Int -> Bool -> [Board] -> (Board, Float)
 minimax (board : []) height minOrmax history
-   |checkBlackWin board == True || checkWhiteWin board == True = (board,goodness board)
+   | checkBlackWin board == True || checkWhiteWin board == True = (board,goodness board)
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
-   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) False history))
-   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history))
+   | minOrmax == True = (board, snd (minimax (filterBoards (generateNewBoards board) history) (height - 1) True history))
+   | otherwise = (board, snd (minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) False history))
 
 minimax (board : boards) height minOrmax history
-   | minOrmax == True = maxBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
-   | otherwise = minBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | null (tail boards) && minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) False history)]
+   | null (tail boards) = minBoard [(minimax [board] (height) True history), (minimax boards (height) True history)]
+   | minOrmax == True = maxBoard [(minimax [board] (height) False history), (minimax boards (height) True history)]
+   | otherwise = minBoard [(minimax [board] (height) True history), (minimax boards (height) False history)]
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
