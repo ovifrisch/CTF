@@ -1,3 +1,5 @@
+module Ctf1 where
+
 type Board = String
 
 {-
@@ -70,15 +72,15 @@ minBoardHelper ((b, val) : tail) (bmin, valmin)
    | otherwise = minBoardHelper tail (bmin, valmin)
 
 {-
-
+Args are same as minimax, just with single board instead of lists of boards
 -}
 toplevelMinimax :: Board -> Int -> Bool -> [Board] -> (Board, Float)
 toplevelMinimax board height minOrmax history
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
-   | minOrmax == True = minimax (filterBoards (generateNewBoards board) history) (height - 1) True history
-   | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) False history
+   | minOrmax == True = minimax (filterBoards (generateNewBoards board) history) (height - 1) False history
+   | otherwise = minimax (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) (height - 1) True history
 
 {-
 Arg1: A list of boards
@@ -89,7 +91,6 @@ OUT: The next best move, and its heuristic strength
 -}
 minimax :: [Board] -> Int -> Bool -> [Board] -> (Board, Float)
 minimax (board : []) height minOrmax history
-   |checkBlackWin board == True || checkWhiteWin board == True = (board,goodness board)
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
@@ -119,9 +120,10 @@ Out: A number indicating how good of a board this is for 'w'
 -}
 goodness :: Board -> Float
 goodness board
-   | checkWhiteWin board = 1000
-   | checkBlackWin board = -1000
-   | otherwise           = 0
+   | checkWhiteWin board = 10000
+   | checkBlackWin board = -10000
+   | otherwise           = (pawnDiff board) * 10
+
 
 -----------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------STATIC BOARD EVALUATION---------------------------------------------------
@@ -239,7 +241,7 @@ OUT: A list of boards that can be generated from Arg1 by jumping a white piece t
 generateNewWhiteJumpsRight :: Board -> Int -> [Board]
 generateNewWhiteJumpsRight currBoard pos
    | pos > (length currBoard) - 1 = []
-   |mod (pos + 1) (boardSize currBoard) == 0 || mod (pos + 2) (boardSize currBoard) == 0 = generateNewWhiteJumpsDown currBoard (pos + 1)
+   | mod (pos + 1) (boardSize currBoard) == 0 || mod (pos + 2) (boardSize currBoard) == 0 = generateNewWhiteJumpsRight currBoard (pos + 1)
    | currBoard !! pos == 'w' && (currBoard !! (pos + 1)  == 'b' || currBoard !! (pos + 1) == 'B') && currBoard !! (pos + 2) == '-' = modifyBoard currBoard[('-', pos), ('-', pos + 1), ('w', pos + 2)] : generateNewWhiteJumpsRight currBoard (pos + 1)
    | otherwise = generateNewWhiteJumpsRight currBoard (pos + 1)
 
@@ -291,13 +293,12 @@ OUT: Arg1 with 'w' swapped with 'b' and 'W' swapped with 'B'
 flipBoard :: Board -> Board
 flipBoard board = reverse (flipBoardHelper board)
 
-flipBoardHelper :: Board -> Board
 flipBoardHelper [] = []
-flipBoardHelper ('-':as) = '-' : (flipBoard as)
-flipBoardHelper ('w':as) = 'b' : (flipBoard as)
-flipBoardHelper ('b':as) = 'w' : (flipBoard as)
-flipBoardHelper ('W':as) = 'B' : (flipBoard as)
-flipBoardHelper ('B':as) = 'W' : (flipBoard as)
+flipBoardHelper ('-':as) = '-' : (flipBoardHelper as)
+flipBoardHelper('w':as) = 'b' : (flipBoardHelper as)
+flipBoardHelper('b':as) = 'w' : (flipBoardHelper as)
+flipBoardHelper('W':as) = 'B' : (flipBoardHelper as)
+flipBoardHelper('B':as) = 'W' : (flipBoardHelper as)
 
 
 {-
@@ -334,6 +335,12 @@ modifyBoard board ((val, pos) : tail) = modifyBoard (replaceNth board pos val) t
 -----------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------UTILITY FUCTIONS FOR EVALUATION----------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
+
+
+
+---------------------------------------
+------ Win Condition Checkers ---------
+---------------------------------------
 
 {-
 Win condition checkers
@@ -400,10 +407,10 @@ Assist in finding if white flag is past black pawns
 -}
 whiteForwardHelper :: Board -> Int -> Bool
 whiteForwardHelper board len 
-    | null board                                    = True
-    | elem 'b' (drop (length board - len) board)    = False 
-    | elem 'W' (drop (length board - len) board)    = True
-    | otherwise                                     = whiteForwardHelper (take (length board - len) board) len
+   | null board                                    = True
+   | elem 'b' (drop (length board - len) board)    = False
+   | elem 'W' (drop (length board - len) board)    = True
+   | otherwise                                     = whiteForwardHelper (take (length board - len) board) len
 
 {-
 Arg1: board
@@ -421,10 +428,11 @@ Assist in finding if black flag is past white pawns
 -}
 blackForwardHelper :: Board -> Int -> Bool
 blackForwardHelper board len 
-    | null board                   = True
-    | elem 'w' (take len board)    = False 
-    | elem 'B' (take len board)    = True
-    | otherwise                    = blackForwardHelper (drop len board) len
+   | null board                   = True
+   | elem 'w' (take len board)    = False 
+   | elem 'B' (take len board)    = True
+   | otherwise                    = blackForwardHelper (drop len board) len
+
 
 ---------------------------------------
 -----------Pawn differnce--------------
@@ -453,7 +461,7 @@ Arg1: board
 Return: True if white flag is touching either the right or left edge of the board 
 -}
 
-flagSide :: Board -> Float
+flagSide :: Board -> Bool
 flagSide board = flagSideHelper board (boardSize board)
 
 {-
@@ -463,15 +471,25 @@ Arg2: len
 Return: True if white flag is touching either the right or left edge of the board 
 -}
 
-flagSideHelper :: Board -> Int -> Float
+flagSideHelper :: Board -> Int -> Bool
 flagSideHelper board len
-   | elem 'W' (drop (length board - len) board)    = min (fst(rightleftSide (drop (length board - len) board))) (snd(rightleftSide (drop (length board - len) board)))
-   | otherwise                                     = flagSideHelper(take (length board - len) board) len
+   | null board                                        = False
+   | head (drop (length board - len) board) == 'W'     = True
+   | last (drop (length board - len) board) == 'W'     = True
+   | elem 'W' (drop (length board - len) board)        = False 
+   | otherwise                                         = flagSideHelper(take (length board - len) board) len
 
+-------------------------------------------------------
+-----------BlockEnemyFlag------------------------------
+-------------------------------------------------------
 
-rightleftSide :: Board -> (Float, Float)
-rightleftSide ('W':xs) = (0, fromIntegral (length xs))
-rightleftSide (_:xs) = (1 + fst (rightleftSide xs), snd(rightleftSide xs))
+{-
+Arg1 : board
+Return: An integer of 1,0, or -1. 
+	1: Enemy flag is against the edge, and our pawn has blocked it.
+        -1: Enemy flag is against the edge and not blocked.
+	0: enemy flag is not against the edge.  
+-}
 
 ------------------------------------------------------
 --------------- Flag Distance to End -----------------
@@ -482,11 +500,5 @@ rightleftSide (_:xs) = (1 + fst (rightleftSide xs), snd(rightleftSide xs))
  Return: Number of rows to enemy side of board.
 -}
 
-flagDistance :: Board -> Float
-flagDistance board = flagDistanceHelper board (boardSize board)
-
-flagDistanceHelper :: Board -> Int -> Float
-flagDistanceHelper board len
-   | elem 'W' (drop (length board - len) board) = 0
-   | otherwise                                  = 1 + flagDistanceHelper (take (length board - len) board) len
-
+--flagDistance :: Board -> Int
+--flagDistance board = board
