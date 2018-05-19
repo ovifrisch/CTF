@@ -125,7 +125,7 @@ goodness :: Board -> Float
 goodness board
    | checkWhiteWin board = 1000
    | checkBlackWin board = -1000
-   | otherwise           = (flagSide board) * (-7) + (flagDistance board) * (-5) + (pawnDiff board) * (10) 
+   | otherwise           = (flagDistance board) * (-5) + (pawnDiff board) * (5) 
 
 
 

@@ -1,4 +1,4 @@
-module Ctf2 where
+module Ctf1 where
 
 type Board = String
 
@@ -125,7 +125,7 @@ goodness :: Board -> Float
 goodness board
    | checkWhiteWin board = 1000
    | checkBlackWin board = -1000
-   | otherwise           = (flagDistance board) * (-5) + (pawnDiff board) * (5)
+   | otherwise           = (flagDistance board) * (-5) + (pawnDiff board) * (10) 
 
 
 
@@ -485,6 +485,18 @@ rightleftSide :: Board -> (Float, Float)
 rightleftSide ('W':xs) = (0, fromIntegral (length xs))
 rightleftSide (_:xs) = (1 + fst (rightleftSide xs), snd(rightleftSide xs))
 
+-------------------------------------------------------
+-----------BlockEnemyFlag------------------------------
+-------------------------------------------------------
+
+{-
+Arg1 : board
+Return: An integer of 1,0, or -1. 
+	1: Enemy flag is against the edge, and our pawn has blocked it.
+        -1: Enemy flag is against the edge and not blocked.
+	0: enemy flag is not against the edge.  
+-}
+
 ------------------------------------------------------
 --------------- Flag Distance to End -----------------
 ------------------------------------------------------
@@ -501,34 +513,3 @@ flagDistanceHelper :: Board -> Int -> Float
 flagDistanceHelper board len
    | elem 'W' (drop (length board - len) board) = 0
    | otherwise                                  = 1 + flagDistanceHelper (take (length board - len) board) len
-
-----------------------------------------------
----pawns in opponents back row ---------------
-----------------------------------------------
-
-pawnBack :: Board -> Float
-pawnBack board = countPiece (drop (length board -  (boardSize board))  board) 'w'
-
-countPiece :: String -> Char -> Float
-countPiece board c 
-    | null board = 0
-    | (head board) == c = 1 + countPiece (tail board) c
-    | otherwise = countPiece (tail board) c
-
-
------------------------------------------------
---------------Nearby Friends ------------------
------------------------------------------------
-
-{-
-   Returns the number of white pieces touching other white pieces
--}
-
-nearbyFriends :: Board ->  Int -> Float
-nearbyFriends board pos
-    | pos > (length curboard) - 1 = 0
-    | board !! pos == 'w' = (countPiece (getSurrounding board pos) 'w') + nearbyFriends board (1+pos)
-    | otherwise = 0
-
-getSurrounding :: Board -> Int -> Float
-getSurrounding board pos = []
