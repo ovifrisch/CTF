@@ -89,7 +89,7 @@ OUT: The next best move, and its heuristic strength
 -}
 minimax :: [Board] -> Int -> Bool -> [Board] -> (Board, Float)
 minimax (board : []) height minOrmax history
-   | checkBlackWin board == True || checkWhiteWin board == True = (board,goodness board)
+   | checkWhiteWin (flipBoard board) == True || checkWhiteWin board == True = (board,goodness board)
    | minOrmax == True && (filterBoards (generateNewBoards board) history) == [] = (board, goodness board)
    | minOrmax == False && (filterBoards (flipEachBoard (generateNewBoards (flipBoard board))) history) == [] = (board, goodness board)
    | height == 0 = (board, goodness board)
@@ -122,7 +122,7 @@ Out: A number indicating how good of a board this is for 'w'
 goodness :: Board -> Float
 goodness board
    | checkWhiteWin board = 1000
-   | checkBlackWin board = -1000
+   | checkWhiteWin (flipBoard board) = -1000
    | otherwise           = 0
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -347,15 +347,42 @@ Also doesn't check if either player is out of valid moves
 Arg1: board
 Returns true if White won, false otherwise
 -}
-checkWhiteWin :: String -> Bool
-checkWhiteWin board = not(checkBlackPawn board && checkBlackFlag board) || checkWhiteForward board
+checkWhiteWin :: Board -> Bool
+checkWhiteWin board = not(checkWhitePawn (flipBoard board) && checkWhiteFlag (flipBoard board)) || checkWhiteForward board || checkBlackCantMove board
+
+checkBlackCantMove :: Board -> Bool
+checkBlackCantMove board = checkBlackCantMoveHelper board 0
 
 {-
-Arg1: board
-Returns true if Black won, false otherwise
+Arg1: A board
+Arg2: current position at the board
+OUT: true if you reach end of board, false if a black piece can move
 -}
-checkBlackWin :: Board -> Bool
-checkBlackWin board = not(checkWhitePawn board && checkWhiteFlag board) || checkBlackForward board
+checkBlackCantMoveHelper :: Board -> Int -> Bool
+checkBlackCantMoveHelper board pos
+   | pos >= length board = True
+   | board !! pos == 'B' && blackFlagCanMove board pos = False
+   | board !! pos == 'b' && blackPawnCanMove board pos = False
+   | otherwise = checkBlackCantMoveHelper board (pos + 1)
+
+blackFlagCanMove :: Board -> Int -> Bool
+blackFlagCanMove board pos
+   | pos >= boardSize board && board !! (pos - boardSize board) == '-' = True
+   | pos < (length board - boardSize board) && board !! (pos + boardSize board) == '-' = True
+   | not(mod (pos + 1) (boardSize board) == 0) && board !! (pos + 1) == '-' = True
+   | not(mod pos (boardSize board) == 0) && board !! (pos - 1) == '-' = True 
+   | otherwise = False
+
+blackPawnCanMove :: Board -> Int -> Bool
+blackPawnCanMove board pos
+   | pos >= boardSize board && board !! (pos - boardSize board) == '-' = True
+   | pos >= (2 * boardSize board) && (board !! (pos - boardSize board) == 'w' || board !! (pos - boardSize board) == 'W') && board !! (pos - 2 * boardSize board) == '-' = True
+   | not(mod (pos + 1) (boardSize board) == 0) && board !! (pos + 1) == '-' = True
+   | mod pos (boardSize board) >= 2 && (board !! (pos - 1) == 'w' || board !! (pos - 1) == 'W') && board !! (pos - 2) == '-' = True
+   | not(mod pos (boardSize board) == 0) && board !! (pos - 1) == '-' = True
+   | mod pos (boardSize board) < (boardSize board - 2) && (board !! (pos + 1) == 'w' || board !! (pos + 1) == 'W') && board !! (pos + 2) == '-' = True
+   | otherwise = False
+
 
 
 {-
@@ -365,12 +392,6 @@ Check if the white flag is still on the board
 checkWhiteFlag :: Board -> Bool
 checkWhiteFlag board = elem 'W' board
 
-{-
-Arg1: board
-Check if a black flag is still on the board
--}
-checkBlackFlag :: Board -> Bool
-checkBlackFlag board = elem 'B' board
 
 {-
 Arg1: board
@@ -379,12 +400,7 @@ Check if a white pawn is still on the board
 checkWhitePawn :: Board -> Bool
 checkWhitePawn board = elem 'w' board
 
-{-
-Arg1: board
-Check if a black pawn is still on the board
--}
-checkBlackPawn :: Board -> Bool
-checkBlackPawn board = elem 'b' board
+
 
 {-
 Arg1: board
@@ -407,26 +423,6 @@ whiteForwardHelper board len
     | elem 'W' (drop (length board - len) board)    = True
     | otherwise                                     = whiteForwardHelper (take (length board - len) board) len
 
-{-
-Arg1: board
-Return true if Black flag is past all white pawns
--}
-checkBlackForward :: Board -> Bool
-checkBlackForward board = 
-    let boardlen = boardSize board
-    in blackForwardHelper board boardlen
-
-{-
-Arg1: board
-Arg2: side length
-Assist in finding if black flag is past white pawns
--}
-blackForwardHelper :: Board -> Int -> Bool
-blackForwardHelper board len 
-    | null board                   = True
-    | elem 'w' (take len board)    = False 
-    | elem 'B' (take len board)    = True
-    | otherwise                    = blackForwardHelper (drop len board) len
 
 ---------------------------------------
 -----------Pawn differnce--------------
