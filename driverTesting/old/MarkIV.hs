@@ -1,4 +1,4 @@
-module Ctf2 where
+module Ctf1 where
 
 type Board = String
 
@@ -126,7 +126,7 @@ goodness board
    | checkWhiteWin board = 10000
    | checkWhiteWin (flipBoard board) = -10000
    | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (10) + (nearbyFriends board 0) * (10)
-      + (pawnPast board) * (-1) + (pawnPast (flipBoard board)) * (10)
+      + (pawnPast board) * (-1)
 
 
 -----------------------------------------------------------------------------------------------------------------------------------

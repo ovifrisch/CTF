@@ -3,24 +3,29 @@ import qualified Ctf2
 
 driver1 :: [String] -> Int -> Bool -> Int -> [String]
 driver1 boards depth turn turns
-    | Ctf2.checkBlackWin (head boards) == True = ("2 wins":boards)
-    | Ctf2.checkWhiteWin(head boards) == True = ("1 wins":boards)
+    | Ctf2.checkWhiteWin (Ctf2.flipBoard (head boards)) == True = ("2 wins":boards)
+    | Ctf2.checkWhiteWin (head boards) == True = ("1 wins":boards)
     | turns == 0        = boards
     | turn == True      = let x = (Ctf1.capture boards 'w' depth) in (driver1 (x:boards) depth False (turns - 1))
     | turn == False     = let x = (Ctf2.capture boards 'b' depth) in (driver1 (x:boards) depth True (turns - 1))
 
 driver2 :: [String] -> Int -> Bool -> Int -> [String]
 driver2 boards depth turn turns
-    | Ctf2.checkBlackWin (head boards) == True = ("1 wins":boards)
-    | Ctf2.checkWhiteWin(head boards) == True = ("2 wins":boards)
+    | Ctf2.checkWhiteWin (Ctf2.flipBoard (head boards)) == True = ("1 wins":boards)
+    | Ctf2.checkWhiteWin (head boards) == True = ("2 wins":boards)
     | turns == 0        = boards
     | turn == True      = let x = (Ctf2.capture boards 'w' depth) in (driver2 (x:boards) depth False (turns - 1))
     | turn == False     = let x = (Ctf1.capture boards 'b' depth) in (driver2 (x:boards) depth True (turns - 1))
 
-
+driverHuman boards depth
+    | Ctf2.checkWhiteWin (Ctf2.flipBoard (head boards)) == True = (putStrLn "1 wins")
+    | Ctf2.checkWhiteWin (head boards) == True = (putStrLn "2 wins")
+    | otherwise     = do line <- getLine
+                         putStrLn (Ctf2.capture (line:boards) 'b' depth)
+                         --driverHuman (x:boards) depth
 
 trial1 :: [String]
-trial1 = (driver1 ["-wWw--www-------bbb--bBb-"] 3 True 150)
+trial1 = (driver1 ["-wWw--www-------bbb--bBb-"] 3 True 300)
 
 trial2 :: [String]
 trial2 = (driver1 ["--Ww--w-w-------b-b--bB--"] 3 True 150)
@@ -35,7 +40,7 @@ trial5 :: [String]
 trial5 = (driver1 ["Ww--w------b--bB"] 5 True 150)
 
 trial6 :: [String]
-trial6 = (driver2 ["-wWw--www-------bbb--bBb-"] 3 True 150)
+trial6 = (driver2 ["-wWw--www-------bbb--bBb-"] 3 True 300)
 
 trial7 :: [String]
 trial7 = (driver2 ["--Ww--w-w-------b-b--bB--"] 3 True 150)

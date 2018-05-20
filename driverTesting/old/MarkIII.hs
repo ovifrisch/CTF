@@ -1,4 +1,4 @@
-module Ctf2 where
+module Ctf1 where
 
 type Board = String
 
@@ -126,7 +126,7 @@ goodness board
    | checkWhiteWin board = 10000
    | checkWhiteWin (flipBoard board) = -10000
    | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (10) + (nearbyFriends board 0) * (10)
-      + (pawnPast board) * (-1) + (pawnPast (flipBoard board)) * (10)
+
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -502,21 +502,12 @@ flagDistanceHelper board len
    | otherwise                                  = 1 + flagDistanceHelper (take (length board - len) board) len
 
 ----------------------------------------------
----pawns past opponents flag -----------------
+---pawns in opponents back row ---------------
 ----------------------------------------------
 
-{-
-  Takes a board, returns the number of white pawns past the black flag
--}
-pawnPast :: Board -> Float
-pawnPast board
-    | elem 'B' (drop (length board - (boardSize board)) board) = 0
-    | otherwise = (countPiece (drop (length board - (boardSize board)) board) 'w') + pawnPast (take (length board - (boardSize board)) board)
+pawnBack :: Board -> Float
+pawnBack board = countPiece (drop (length board -  (boardSize board))  board) 'w'
 
-{-
- Takes a string and a character (piece indicator)
- counts the number of times that char appears in that string
--}
 countPiece :: String -> Char -> Float
 countPiece board c 
     | null board = 0
