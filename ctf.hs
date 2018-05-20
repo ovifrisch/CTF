@@ -365,6 +365,12 @@ checkBlackCantMoveHelper board pos
    | board !! pos == 'b' && blackPawnCanMove board pos = False
    | otherwise = checkBlackCantMoveHelper board (pos + 1)
 
+{-
+Arg1: a board
+Arg2: position of current square
+Assumption: piece at current square is 'B'
+OUT: true if 'B' can move, false otherwise
+-}
 blackFlagCanMove :: Board -> Int -> Bool
 blackFlagCanMove board pos
    | pos >= boardSize board && board !! (pos - boardSize board) == '-' = True
@@ -373,6 +379,12 @@ blackFlagCanMove board pos
    | not(mod pos (boardSize board) == 0) && board !! (pos - 1) == '-' = True 
    | otherwise = False
 
+{-
+Arg1: a board
+Arg2: position of current square
+Assumption: piece at current square is 'b'
+OUT: true is 'b' can move, false otherwise
+-}
 blackPawnCanMove :: Board -> Int -> Bool
 blackPawnCanMove board pos
    | pos >= boardSize board && board !! (pos - boardSize board) == '-' = True
