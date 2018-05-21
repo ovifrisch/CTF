@@ -295,6 +295,7 @@ OUT: Arg1 with 'w' swapped with 'b' and 'W' swapped with 'B'
 flipBoard :: Board -> Board
 flipBoard board = reverse (flipBoardHelper board)
 
+flipBoardHelper :: Board -> Board
 flipBoardHelper [] = []
 flipBoardHelper ('-':as) = '-' : (flipBoardHelper as)
 flipBoardHelper('w':as) = 'b' : (flipBoardHelper as)
@@ -349,6 +350,11 @@ Win condition checkers
 Note that checkWhiteForward will return false if no black pawn exists, so we could remove checkBlackPawn
 Also doesn't check if either player is out of valid moves
 -}
+ 
+{-
+-Arg1: board
+-Returns true if White won, false otherwise
+--}
 
 checkWhiteWin :: Board -> Bool
 checkWhiteWin board = not(checkWhitePawn (flipBoard board) && checkWhiteFlag (flipBoard board)) || checkWhiteForward board || checkBlackCantMove board
