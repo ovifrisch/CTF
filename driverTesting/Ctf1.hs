@@ -125,8 +125,8 @@ goodness :: Board -> Float
 goodness board
    | checkWhiteWin board = 10000
    | checkWhiteWin (flipBoard board) = -10000
-   | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (10) + (nearbyFriends board 0) * (10)
-      + (pawnPast board) * (-1) + (pawnPast (flipBoard board)) * (10)
+   | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (10) + (nearbyFriends board 0) * (1)
+      + (pawnPast board) * (-3) + (pawnPast (flipBoard board)) * (15) + (pawnDistanceForward board) * (-3)
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -570,4 +570,32 @@ getBelow board pos
    | pos > ((length board) - (boardSize board) - 1) = 'N'
    | otherwise = board !! (pos + (boardSize board))
 
+----------------------------------
+-- pawnDistanceForward -----------
+----------------------------------
 
+{-
+Takes a board and returns the total forward movement of the white pawns
+-}
+
+pawnDistanceForward :: Board -> Float
+pawnDistanceForward board = pdfHelper board 0 (boardSize board)
+
+pdfHelper :: Board -> Float -> Int -> Float
+pdfHelper board row len
+   | null board = 0
+   | otherwise  = row * (countPiece (take len board) 'w') + pdfHelper (drop len board) (row + 1) len
+
+
+----------------------------------------
+----- Flag surroundings ----------------
+----------------------------------------
+
+{-
+ Returns number of opposing pieces around the flag
+-}
+
+flagSurround :: Board -> Int -> Float
+flagSurround board pos 
+   | board !! pos == 'W' = (countPiece (getSurrounding board pos) 'b')
+   | otherwise = flagSurround board (pos + 1)

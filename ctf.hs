@@ -8,7 +8,7 @@ OUT: A board representing the next best move
 -}
 capture :: [Board] -> Char -> Int -> Board
 capture (current:history) 'w' movesAhead = fst (toplevelMinimax current movesAhead True history)
-capture (current:history) 'b' movesAhead = (flipBoard (fst (toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history))))
+capture (current:history) 'b' movesAhead = flipBoard (fst(toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history)))
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ minBoardHelper ((b, val) : tail) (bmin, valmin)
    | otherwise = minBoardHelper tail (bmin, valmin)
 
 {-
-
+Args are same as minimax, just with single board instead of lists of boards
 -}
 toplevelMinimax :: Board -> Int -> Bool -> [Board] -> (Board, Float)
 toplevelMinimax board height minOrmax history
@@ -121,9 +121,11 @@ Out: A number indicating how good of a board this is for 'w'
 -}
 goodness :: Board -> Float
 goodness board
-   | checkWhiteWin board = 1000
-   | checkWhiteWin (flipBoard board) = -1000
-   | otherwise           = 0
+   | checkWhiteWin board = 10000
+   | checkWhiteWin (flipBoard board) = -10000
+   | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (10) + (nearbyFriends board 0) * (1)
+      + (pawnPast board) * (-3) + (pawnPast (flipBoard board)) * (15) + (pawnDistanceForward board) * (-3) + (pawnDistanceForward (flipBoard board)) * (1)
+
 
 -----------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------STATIC BOARD EVALUATION---------------------------------------------------
@@ -241,7 +243,7 @@ OUT: A list of boards that can be generated from Arg1 by jumping a white piece t
 generateNewWhiteJumpsRight :: Board -> Int -> [Board]
 generateNewWhiteJumpsRight currBoard pos
    | pos > (length currBoard) - 1 = []
-   |mod (pos + 1) (boardSize currBoard) == 0 || mod (pos + 2) (boardSize currBoard) == 0 = generateNewWhiteJumpsDown currBoard (pos + 1)
+   | mod (pos + 1) (boardSize currBoard) == 0 || mod (pos + 2) (boardSize currBoard) == 0 = generateNewWhiteJumpsRight currBoard (pos + 1)
    | currBoard !! pos == 'w' && (currBoard !! (pos + 1)  == 'b' || currBoard !! (pos + 1) == 'B') && currBoard !! (pos + 2) == '-' = modifyBoard currBoard[('-', pos), ('-', pos + 1), ('w', pos + 2)] : generateNewWhiteJumpsRight currBoard (pos + 1)
    | otherwise = generateNewWhiteJumpsRight currBoard (pos + 1)
 
@@ -293,13 +295,12 @@ OUT: Arg1 with 'w' swapped with 'b' and 'W' swapped with 'B'
 flipBoard :: Board -> Board
 flipBoard board = reverse (flipBoardHelper board)
 
-flipBoardHelper :: Board -> Board
 flipBoardHelper [] = []
 flipBoardHelper ('-':as) = '-' : (flipBoardHelper as)
-flipBoardHelper ('w':as) = 'b' : (flipBoardHelper as)
-flipBoardHelper ('b':as) = 'w' : (flipBoardHelper as)
-flipBoardHelper ('W':as) = 'B' : (flipBoardHelper as)
-flipBoardHelper ('B':as) = 'W' : (flipBoardHelper as)
+flipBoardHelper('w':as) = 'b' : (flipBoardHelper as)
+flipBoardHelper('b':as) = 'w' : (flipBoardHelper as)
+flipBoardHelper('W':as) = 'B' : (flipBoardHelper as)
+flipBoardHelper('B':as) = 'W' : (flipBoardHelper as)
 
 
 {-
@@ -337,16 +338,18 @@ modifyBoard board ((val, pos) : tail) = modifyBoard (replaceNth board pos val) t
 ------------------------------------------------------------UTILITY FUCTIONS FOR EVALUATION----------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------
 
+
+
+---------------------------------------
+------ Win Condition Checkers ---------
+---------------------------------------
+
 {-
 Win condition checkers
 Note that checkWhiteForward will return false if no black pawn exists, so we could remove checkBlackPawn
 Also doesn't check if either player is out of valid moves
 -}
 
-{-
-Arg1: board
-Returns true if White won, false otherwise
--}
 checkWhiteWin :: Board -> Bool
 checkWhiteWin board = not(checkWhitePawn (flipBoard board) && checkWhiteFlag (flipBoard board)) || checkWhiteForward board || checkBlackCantMove board
 
@@ -395,8 +398,6 @@ blackPawnCanMove board pos
    | mod pos (boardSize board) < (boardSize board - 2) && (board !! (pos + 1) == 'w' || board !! (pos + 1) == 'W') && board !! (pos + 2) == '-' = True
    | otherwise = False
 
-
-
 {-
 Arg1: board
 Check if the white flag is still on the board
@@ -404,14 +405,12 @@ Check if the white flag is still on the board
 checkWhiteFlag :: Board -> Bool
 checkWhiteFlag board = elem 'W' board
 
-
 {-
 Arg1: board
 Check if a white pawn is still on the board
 -}
 checkWhitePawn :: Board -> Bool
 checkWhitePawn board = elem 'w' board
-
 
 
 {-
@@ -430,13 +429,13 @@ Assist in finding if white flag is past black pawns
 -}
 whiteForwardHelper :: Board -> Int -> Bool
 whiteForwardHelper board len 
-    | null board                                    = True
-    | elem 'b' (drop (length board - len) board)    = False 
-    | elem 'W' (drop (length board - len) board)    = True
-    | otherwise                                     = whiteForwardHelper (take (length board - len) board) len
+   | null board                                    = True
+   | elem 'b' (drop (length board - len) board)    = False
+   | elem 'W' (drop (length board - len) board)    = True
+   | otherwise                                     = whiteForwardHelper (take (length board - len) board) len
 
 
----------------------------------------
+--------------------------------------
 -----------Pawn differnce--------------
 ---------------------------------------
 
@@ -500,3 +499,101 @@ flagDistanceHelper board len
    | elem 'W' (drop (length board - len) board) = 0
    | otherwise                                  = 1 + flagDistanceHelper (take (length board - len) board) len
 
+----------------------------------------------
+---pawns past opponents flag -----------------
+----------------------------------------------
+
+{-
+  Takes a board, returns the number of white pawns past the black flag
+-}
+pawnPast :: Board -> Float
+pawnPast board
+    | elem 'B' (drop (length board - (boardSize board)) board) = 0
+    | otherwise = (countPiece (drop (length board - (boardSize board)) board) 'w') + pawnPast (take (length board - (boardSize board)) board)
+
+{-
+ Takes a string and a character (piece indicator)
+ counts the number of times that char appears in that string
+-}
+countPiece :: String -> Char -> Float
+countPiece board c 
+    | null board = 0
+    | (head board) == c = 1 + countPiece (tail board) c
+    | otherwise = countPiece (tail board) c
+
+
+-----------------------------------------------
+--------------Nearby Friends ------------------
+-----------------------------------------------
+
+{-
+   Returns the number of white pieces touching other white pieces
+-}
+
+nearbyFriends :: Board ->  Int -> Float
+nearbyFriends board pos
+   | pos > (length board) - 1 = 0
+   | board !! pos == 'w' || board !! pos == 'W' = (countPiece (getSurrounding board pos) 'w') + (countPiece (getSurrounding board pos) 'W') + nearbyFriends board (1+pos) 
+   | otherwise = nearbyFriends board (pos+1)
+
+{-
+Takes a board and position
+Returns all the pieces around said position
+-}
+getSurrounding :: Board -> Int -> String
+getSurrounding board pos = [(getRight board pos),(getLeft board pos),(getAbove board pos),(getBelow board pos)]
+
+{-
+Each of the below functions take a position and a board and return the character either left, right, above or below that postion
+A 'N' is returned if the position is not valid
+-}
+
+getRight :: Board -> Int -> Char
+getRight board pos
+   | mod (pos + 1) (boardSize board) == 0 = 'N'
+   | otherwise = board !! (pos + 1)
+
+getLeft :: Board -> Int -> Char
+getLeft board pos 
+   | mod (pos) (boardSize board) == 0 = 'N'
+   | otherwise = board !! (pos - 1)
+
+getAbove :: Board -> Int -> Char
+getAbove board pos
+   | pos < (boardSize board) = 'N'
+   | otherwise = board !! (pos - (boardSize board))
+
+getBelow :: Board -> Int -> Char
+getBelow board pos
+   | pos > ((length board) - (boardSize board) - 1) = 'N'
+   | otherwise = board !! (pos + (boardSize board))
+
+----------------------------------
+-- pawnDistanceForward -----------
+----------------------------------
+
+{-
+Takes a board and returns the total forward movement of the white pawns
+-}
+
+pawnDistanceForward :: Board -> Float
+pawnDistanceForward board = pdfHelper board 0 (boardSize board)
+
+pdfHelper :: Board -> Float -> Int -> Float
+pdfHelper board row len
+   | null board = 0
+   | otherwise  = row * (countPiece (take len board) 'w') + pdfHelper (drop len board) (row + 1) len
+
+
+----------------------------------------
+----- Flag surroundings ----------------
+----------------------------------------
+
+{-
+ Returns number of opposing pieces around the flag
+-}
+
+flagSurround :: Board -> Int -> Float
+flagSurround board pos 
+   | board !! pos == 'W' = (countPiece (getSurrounding board pos) 'b')
+   | otherwise = flagSurround board (pos + 1)
