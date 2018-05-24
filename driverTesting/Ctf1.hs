@@ -9,8 +9,10 @@ Arg3: An int indicating how many moves ahead the minimax algorithm is allowed to
 OUT: A board representing the next best move
 -}
 capture :: [Board] -> Char -> Int -> Board
-capture (current:history) 'w' movesAhead = fst (toplevelMinimax current movesAhead True history)
-capture (current:history) 'b' movesAhead = flipBoard (fst(toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history)))
+capture (current:history) player movesAhead
+   | checkWhiteWin current || checkWhiteWin (flipBoard current) = "Game over"
+   | player == 'w'                                          = fst (toplevelMinimax current movesAhead True history)
+   | player == 'b'                                          = flipBoard (fst(toplevelMinimax (flipBoard current) movesAhead True (flipEachBoard history)))
 
 
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -125,9 +127,9 @@ goodness :: Board -> Float
 goodness board
    | checkWhiteWin board = 10000
    | checkWhiteWin (flipBoard board) = -10000
-   | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (10) + (nearbyFriends board 0) * (1)
-      + (pawnPast board) * (-3) + (pawnPast (flipBoard board)) * (15) + (pawnDistanceForward board) * (-3)
-
+   | otherwise           = (flagDistance board) * (-100) + (pawnDiff board) * (5) + flagDistance (flipBoard board) * (20) + (nearbyFriends board 0) * (5)
+      + (pawnPast board) * (-100) + (pawnPast (flipBoard board)) * (15) + (pawnDistanceForward board) * (-5)
+      + (flagSurround board 0) * (-25)
 
 -----------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------STATIC BOARD EVALUATION---------------------------------------------------
@@ -490,16 +492,21 @@ rightleftSide (_:xs) = (1 + fst (rightleftSide xs), snd(rightleftSide xs))
 
 {-
  Arg1: board
- Return: Number of rows to enemy side of board.
+ Return: Number of rows to pass last enemy pawn.
 -}
 
 flagDistance :: Board -> Float
-flagDistance board = flagDistanceHelper board (boardSize board)
+flagDistance board = flagDistanceHelper1 board (boardSize board) / fromIntegral(boardSize board)
 
-flagDistanceHelper :: Board -> Int -> Float
-flagDistanceHelper board len
+flagDistanceHelper1 :: Board -> Int -> Float
+flagDistanceHelper1 board len
+   | elem 'b' (drop (length board - len) board) = flagDistanceHelper2 board len
+   | otherwise                                  = flagDistanceHelper1 (take (length board - len) board) len
+
+flagDistanceHelper2 :: Board -> Int -> Float
+flagDistanceHelper2 board len
    | elem 'W' (drop (length board - len) board) = 0
-   | otherwise                                  = 1 + flagDistanceHelper (take (length board - len) board) len
+   | otherwise                                  = 1 + flagDistanceHelper2 (take (length board - len) board) len
 
 ----------------------------------------------
 ---pawns past opponents flag -----------------
@@ -579,7 +586,7 @@ Takes a board and returns the total forward movement of the white pawns
 -}
 
 pawnDistanceForward :: Board -> Float
-pawnDistanceForward board = pdfHelper board 0 (boardSize board)
+pawnDistanceForward board = pdfHelper board 0 (boardSize board) / fromIntegral (boardSize board)
 
 pdfHelper :: Board -> Float -> Int -> Float
 pdfHelper board row len
@@ -597,5 +604,39 @@ pdfHelper board row len
 
 flagSurround :: Board -> Int -> Float
 flagSurround board pos 
-   | board !! pos == 'W' = (countPiece (getSurrounding board pos) 'b')
+   | board !! pos == 'W' = (countPiece (getDiagAndSurrounding board pos) 'b') / 6
    | otherwise = flagSurround board (pos + 1)
+
+{-
+Takes a board and position
+Returns all the pieces around said position, and in the front 2 diagnols of said position
+-}
+getDiagAndSurrounding :: Board -> Int -> String
+getDiagAndSurrounding board pos = [(getRight board pos),(getLeft board pos),(getAbove board pos),(getBelow board pos),(getDiagLeft board pos),(getDiagRight board pos)]
+
+getDiagLeft :: Board -> Int -> Char
+getDiagLeft board pos
+   | pos < (boardSize board) = 'N'
+   | otherwise = getLeft board (pos - (boardSize board))
+
+
+getDiagRight :: Board -> Int -> Char
+getDiagRight board pos
+   | pos < (boardSize board) = 'N'
+   | otherwise = getRight board (pos - (boardSize board))
+
+{-
+Returns 1 if a pawn is in the same col as the opponents flag
+-}
+
+pawnCol :: Board -> Int -> Float
+pawnCol board pos
+   | board !! pos == 'B' = (pawnColHelper board (pos - boardSize board))
+   | otherwise = pawnCol board (pos + 1)
+
+pawnColHelper :: Board -> Int -> Float
+pawnColHelper board pos
+   | board !! pos == 'w' = 1 
+   | (pos - boardSize board) < (length board - 1) = 0
+   | otherwise = (pawnColHelper board (pos - boardSize board))
+
